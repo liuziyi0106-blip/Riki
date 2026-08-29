@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>出海营销助手 · AI Overseas Marketing Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0f17;
+    --panel:#121a28;
+    --panel-2:#182234;
+    --border:#24304a;
+    --border-soft:#1b2537;
+    --text:#eef1f6;
+    --text-muted:#8b96ac;
+    --text-dim:#5c6884;
+    --teal:#5eead4;
+    --coral:#ff6b4a;
+    --amber:#f5c451;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1200px 600px at 15% -10%, #142033 0%, transparent 60%),
+      radial-gradient(1000px 500px at 100% 0%, #16233a 0%, transparent 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Sans','PingFang SC','Microsoft YaHei',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .display{font-family:'Space Grotesk','PingFang SC','Microsoft YaHei',sans-serif;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+
+  .wrap{max-width:960px;margin:0 auto;padding:28px 20px 80px;}
+
+  header{display:flex;flex-direction:column;gap:4px;margin-bottom:20px;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--teal);display:flex;align-items:center;gap:8px;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 8px var(--teal);animation:pulse 2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  h1{
+    font-size:clamp(24px,4vw,34px);
+    font-weight:700;margin:2px 0 2px;letter-spacing:-.01em;
+  }
+  .sub{color:var(--text-muted);font-size:14px;line-height:1.6;max-width:60ch;}
+
+  .ticker{
+    display:flex;gap:0;margin:22px 0 28px;
+    border:1px solid var(--border-soft);
+    border-radius:var(--radius);
+    overflow:hidden;
+    background:linear-gradient(180deg,#101827,#0d1420);
+    flex-wrap:wrap;
+  }
+  .tick{
+    flex:1 1 0;min-width:110px;
+    padding:12px 14px;
+    border-right:1px solid var(--border-soft);
+    position:relative;
+    transition:background .2s ease;
+  }
+  .tick:last-child{border-right:none;}
+  .tick.active{background:rgba(94,234,212,.06);}
+  .tick.active::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:var(--teal);}
+  .tick .flag{font-size:16px;}
+  .tick .name{font-size:11px;color:var(--text-muted);margin-top:4px;letter-spacing:.02em;}
+  .tick .time{font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;margin-top:2px;color:var(--text);}
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:16px;
+  }
+  .panel h2{
+    font-size:12px;text-transform:uppercase;letter-spacing:.1em;
+    color:var(--text-dim);margin:0 0 12px;font-weight:600;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  textarea{
+    width:100%;min-height:110px;resize:vertical;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+    font-family:'IBM Plex Sans','PingFang SC',sans-serif;
+    font-size:14px;line-height:1.6;
+    padding:12px 14px;
+    outline:none;
+  }
+  textarea:focus{border-color:var(--teal);}
+  textarea::placeholder{color:var(--text-dim);}
+
+  .demo-btn{
+    background:none;border:1px dashed var(--border);
+    color:var(--text-muted);font-size:12px;
+    padding:6px 10px;border-radius:6px;cursor:pointer;
+    font-family:'IBM Plex Mono',monospace;
+    transition:all .15s ease;
+  }
+  .demo-btn:hover{border-color:var(--amber);color:var(--amber);}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .chip{
+    padding:8px 14px;border-radius:20px;
+    border:1px solid var(--border);
+    background:var(--panel-2);
+    color:var(--text-muted);
+    font-size:13px;cursor:pointer;
+    display:flex;align-items:center;gap:6px;
+    transition:all .15s ease;
+    user-select:none;
+  }
+  .chip:hover{border-color:var(--text-dim);color:var(--text);}
+  .chip.sel{
+    background:rgba(94,234,212,.1);
+    border-color:var(--teal);
+    color:var(--teal);
+  }
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  @media (max-width:640px){.grid2{grid-template-columns:1fr;}}
+
+  .cta-row{display:flex;align-items:center;gap:14px;margin:22px 0;flex-wrap:wrap;}
+  .generate{
+    background:linear-gradient(135deg,var(--coral),#ff8a63);
+    color:#1a0d08;font-weight:600;font-size:15px;
+    border:none;border-radius:8px;
+    padding:13px 26px;cursor:pointer;
+    font-family:'Space Grotesk',sans-serif;
+    box-shadow:0 4px 20px rgba(255,107,74,.25);
+    transition:transform .15s ease,box-shadow .15s ease;
+  }
+  .generate:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(255,107,74,.35);}
+  .generate:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+  .meta-hint{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);}
+
+  .loading{
+    display:none;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px;
+    background:var(--panel);
+    margin-bottom:16px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;color:var(--teal);
+  }
+  .loading.show{display:block;}
+  .loading .line{opacity:0;animation:fadein .4s ease forwards;color:var(--text-muted);margin-bottom:4px;}
+  .loading .line:last-child{color:var(--teal);}
+  @keyframes fadein{to{opacity:1;}}
+  .cursor{display:inline-block;width:7px;height:13px;background:var(--teal);margin-left:2px;animation:blink 1s step-end infinite;vertical-align:middle;}
+  @keyframes blink{50%{opacity:0;}}
+
+  .result{display:none;}
+  .result.show{display:block;}
+  .result-head{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}
+  .tag{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;
+    padding:4px 10px;border-radius:5px;
+    background:var(--panel-2);border:1px solid var(--border);
+    color:var(--text-muted);
+  }
+  .result-body{
+    background:var(--panel-2);
+    border:1px solid var(--border-soft);
+    border-radius:8px;
+    padding:18px;
+    font-size:15px;line-height:1.75;
+    white-space:pre-wrap;
+    margin-bottom:12px;
+  }
+  .result-body.zh{color:var(--text-muted);font-size:14px;display:none;}
+  .result-body.zh.show{display:block;}
+  .hashtags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+  .hashtag{font-size:12px;color:var(--teal);font-family:'IBM Plex Mono',monospace;}
+  .notes{font-size:12.5px;color:var(--text-dim);font-style:italic;margin-bottom:16px;line-height:1.6;}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .action-btn{
+    background:var(--panel);border:1px solid var(--border);
+    color:var(--text);font-size:13px;padding:8px 14px;
+    border-radius:6px;cursor:pointer;
+    display:flex;align-items:center;gap:6px;
+    font-family:'IBM Plex Sans',sans-serif;
+    transition:all .15s ease;
+  }
+  .action-btn:hover{border-color:var(--teal);color:var(--teal);}
+  .action-btn.copied{border-color:var(--teal);color:var(--teal);}
+
+  .error-box{
+    display:none;
+    background:rgba(255,107,74,.08);
+    border:1px solid rgba(255,107,74,.3);
+    color:#ffb4a0;
+    border-radius:8px;padding:14px 16px;
+    font-size:13px;margin-bottom:16px;
+  }
+  .error-box.show{display:block;}
+
+  footer{margin-top:36px;text-align:center;color:var(--text-dim);font-size:11px;font-family:'IBM Plex Mono',monospace;letter-spacing:.04em;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow"><span class="dot"></span>AI OVERSEAS MARKETING ASSISTANT · V3 STANDALONE</div>
+    <h1>出海营销助手</h1>
+    <div class="sub">输入一次品牌信息，按平台与市场自动生成本地化营销内容。</div>
+  </header>
+
+  <div class="ticker" id="ticker"></div>
+
+  <div class="panel">
+    <h2>
+      Campaign Brief · 产品与营销简报
+      <button class="demo-btn" id="demoBtn">⚡ Use Zaiyou Demo</button>
+    </h2>
+    <textarea id="brief" placeholder="描述你的品牌 / 产品 / 核心卖点 / 目标人群，例如：一家手工宝石首饰品牌，主打天然彩宝与可定制轻奢设计……"></textarea>
+  </div>
+
+  <div class="grid2">
+    <div class="panel">
+      <h2>Platform · 投放平台</h2>
+      <div class="chips" id="platformChips"></div>
+    </div>
+    <div class="panel">
+      <h2>Target Market · 目标市场</h2>
+      <div class="chips" id="marketChips"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Content Type · 内容类型</h2>
+    <div class="chips" id="typeChips"></div>
+  </div>
+
+  <div class="cta-row">
+    <button class="generate" id="genBtn">Generate Content →</button>
+    <span class="meta-hint" id="metaHint"></span>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+
+  <div class="loading" id="loading">
+    <div class="line" style="animation-delay:.05s">&gt; 读取 campaign brief …</div>
+    <div class="line" style="animation-delay:.5s">&gt; 分析目标市场文化语境 …</div>
+    <div class="line" style="animation-delay:1s">&gt; 适配平台内容规范 …</div>
+    <div class="line" style="animation-delay:1.5s">&gt; 生成本地化文案中<span class="cursor"></span></div>
+  </div>
+
+  <div class="result" id="result">
+    <div class="panel">
+      <div class="result-head" id="resultTags"></div>
+      <div class="result-body" id="resultContent"></div>
+      <div class="result-body zh" id="resultZh"></div>
+      <div class="hashtags" id="resultHashtags"></div>
+      <div class="notes" id="resultNotes"></div>
+      <div class="actions">
+        <button class="action-btn" id="toggleZh">显示中文翻译</button>
+        <button class="action-btn" id="copyBtn">📋 Copy Result</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>API-READY STRUCTURE · CLAUDE SONNET 5 · SELF-HOSTED</footer>
+</div>
+
+<script>
+const platforms = [
+  {id:'tiktok', label:'TikTok', icon:'🎵'},
+  {id:'instagram', label:'Instagram', icon:'📸'},
+  {id:'facebook', label:'Facebook', icon:'👍'},
+  {id:'linkedin', label:'LinkedIn', icon:'💼'},
+  {id:'x', label:'X', icon:'✕'},
+];
+const markets = [
+  {id:'de', label:'德国', flag:'🇩🇪', tz:'Europe/Berlin', lang:'德语 (German)'},
+  {id:'ae', label:'阿联酋', flag:'🇦🇪', tz:'Asia/Dubai', lang:'阿拉伯语 / 英语 (Arabic/English)'},
+  {id:'jp', label:'日本', flag:'🇯🇵', tz:'Asia/Tokyo', lang:'日语 (Japanese)'},
+  {id:'tr', label:'土耳其', flag:'🇹🇷', tz:'Europe/Istanbul', lang:'土耳其语 (Turkish)'},
+  {id:'us', label:'美国', flag:'🇺🇸', tz:'America/New_York', lang:'英语 (English)'},
+];
+const types = [
+  {id:'social', label:'Social Post · 社媒帖文'},
+  {id:'video', label:'Short-video Script · 短视频脚本'},
+  {id:'b2b', label:'B2B Outreach · 商务开发邮件'},
+  {id:'product', label:'Product Description · 产品描述'},
+];
+
+let state = { platform:'tiktok', market:'us', type:'social' };
+
+function renderChips(containerId, items, key){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  items.forEach(it=>{
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (state[key]===it.id ? ' sel' : '');
+    chip.innerHTML = (it.icon? it.icon+' ' : '') + (it.flag? it.flag+' ' : '') + it.label;
+    chip.onclick = ()=>{ state[key]=it.id; renderAll(); updateHint(); };
+    el.appendChild(chip);
+  });
+}
+
+function renderTicker(){
+  const el = document.getElementById('ticker');
+  el.innerHTML = '';
+  markets.forEach(m=>{
+    const t = document.createElement('div');
+    t.className = 'tick' + (state.market===m.id ? ' active' : '');
+    t.innerHTML = `<div class="flag">${m.flag}</div><div class="name">${m.label}</div><div class="time" data-tz="${m.tz}">--:--</div>`;
+    t.onclick = ()=>{ state.market=m.id; renderAll(); updateHint(); };
+    el.appendChild(t);
+  });
+  tickClock();
+}
+function tickClock(){
+  document.querySelectorAll('.tick .time').forEach(elm=>{
+    const tz = elm.getAttribute('data-tz');
+    try{
+      const s = new Intl.DateTimeFormat('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:tz}).format(new Date());
+      elm.textContent = s;
+    }catch(e){ elm.textContent='--:--'; }
+  });
+}
+setInterval(tickClock, 1000);
+
+function updateHint(){
+  const p = platforms.find(x=>x.id===state.platform);
+  const m = markets.find(x=>x.id===state.market);
+  const t = types.find(x=>x.id===state.type);
+  document.getElementById('metaHint').textContent = `→ ${p.label} · ${m.label} (${m.lang}) · ${t.label}`;
+}
+
+function renderAll(){
+  renderChips('platformChips', platforms, 'platform');
+  renderChips('marketChips', markets, 'market');
+  renderChips('typeChips', types, 'type');
+  renderTicker();
+}
+renderAll();
+updateHint();
+
+document.getElementById('demoBtn').onclick = ()=>{
+  document.getElementById('brief').value =
+`品牌名称：在优 Zaiyou
+产品：手工天然彩色宝石首饰，可定制轻奢设计
+核心卖点：
+- 天然彩宝，源头可追溯，符合伦理采购标准
+- 资深匠人手工打造，每一件都独一无二
+- 支持定制刻字 / 尺寸 / 镶嵌方式
+- 主打"用得起的轻奢"，客单价适中但工艺不打折
+目标人群：25-40岁，注重品质与个性表达的海外年轻消费者
+本轮目标：提升海外市场品牌认知度，促成社媒首单转化`;
+  state = { platform:'tiktok', market:'us', type:'social' };
+  renderAll();
+  updateHint();
+};
+
+document.getElementById('toggleZh').onclick = (e)=>{
+  const zh = document.getElementById('resultZh');
+  const showing = zh.classList.toggle('show');
+  e.target.textContent = showing ? '隐藏中文翻译' : '显示中文翻译';
+};
+
+document.getElementById('copyBtn').onclick = (e)=>{
+  const content = document.getElementById('resultContent').textContent;
+  const hashtags = document.getElementById('resultHashtags').textContent;
+  const text = content + (hashtags ? '\n\n' + hashtags : '');
+  navigator.clipboard.writeText(text).then(()=>{
+    e.target.classList.add('copied');
+    e.target.textContent = '✓ Copied';
+    setTimeout(()=>{ e.target.classList.remove('copied'); e.target.textContent='📋 Copy Result'; }, 1600);
+  });
+};
+
+async function generate(){
+  const brief = document.getElementById('brief').value.trim();
+  const errorBox = document.getElementById('errorBox');
+  errorBox.classList.remove('show');
+  if(!brief){
+    errorBox.textContent = '请先填写 Campaign Brief，或点击 "Use Zaiyou Demo" 加载示例场景。';
+    errorBox.classList.add('show');
+    return;
+  }
+  const p = platforms.find(x=>x.id===state.platform);
+  const m = markets.find(x=>x.id===state.market);
+  const t = types.find(x=>x.id===state.type);
+
+  const genBtn = document.getElementById('genBtn');
+  genBtn.disabled = true;
+  document.getElementById('loading').classList.add('show');
+  document.getElementById('result').classList.remove('show');
+
+  try{
+    // 注意：这里调用的是我们自己部署的后端 /api/generate，
+    // 密钥保存在服务器环境变量里，浏览器端不会接触到 API Key。
+    const response = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        brief,
+        platform: p.label,
+        market: m.label,
+        marketLang: m.lang,
+        contentType: t.label
+      })
+    });
+    const parsed = await response.json();
+    if(!response.ok){ throw new Error(parsed.error || '生成失败'); }
+
+    document.getElementById('resultTags').innerHTML =
+      `<span class="tag">${p.icon} ${p.label}</span><span class="tag">${m.flag} ${m.label}</span><span class="tag">${t.label}</span><span class="tag">${parsed.language || m.lang}</span>`;
+    document.getElementById('resultContent').textContent = parsed.content || '';
+    document.getElementById('resultZh').textContent = parsed.content_zh || '';
+    document.getElementById('resultZh').classList.remove('show');
+    document.getElementById('toggleZh').textContent = '显示中文翻译';
+    document.getElementById('resultHashtags').innerHTML =
+      (parsed.hashtags||[]).map(h=>`<span class="hashtag">${h.startsWith('#')?h:'#'+h}</span>`).join(' ');
+    document.getElementById('resultNotes').textContent = parsed.notes_zh ? '💡 ' + parsed.notes_zh : '';
+    document.getElementById('result').classList.add('show');
+  }catch(err){
+    errorBox.textContent = '生成失败，请重试。(' + err.message + ')';
+    errorBox.classList.add('show');
+  }finally{
+    genBtn.disabled = false;
+    document.getElementById('loading').classList.remove('show');
+  }
+}
+document.getElementById('genBtn').onclick = generate;
+</script>
+</body>
+</html>
