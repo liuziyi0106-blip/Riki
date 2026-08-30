@@ -63,7 +63,7 @@ ${brief}
           contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
           generationConfig: {
             temperature: 0.8,
-            maxOutputTokens: 1000,
+            maxOutputTokens: 3000,
             responseMimeType: 'application/json'
           }
         })
