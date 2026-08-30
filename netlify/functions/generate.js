@@ -9,6 +9,7 @@ exports.handler = async function (event) {
 
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
+    console.error('缺少 GEMINI_API_KEY 环境变量');
     return { statusCode: 500, body: JSON.stringify({ error: '服务器未配置 GEMINI_API_KEY，请在 Netlify 项目环境变量中设置' }) };
   }
 
@@ -16,11 +17,13 @@ exports.handler = async function (event) {
   try {
     payload = JSON.parse(event.body || '{}');
   } catch (e) {
+    console.error('请求体解析失败:', event.body);
     return { statusCode: 400, body: JSON.stringify({ error: '请求格式错误' }) };
   }
 
   const { brief, platform, market, marketLang, contentType } = payload;
   if (!brief || !platform || !market || !contentType) {
+    console.error('缺少参数:', payload);
     return { statusCode: 400, body: JSON.stringify({ error: '缺少必要参数（brief / platform / market / contentType）' }) };
   }
 
@@ -45,6 +48,8 @@ ${brief}
 请基于以上信息生成内容。`;
 
   try {
+    console.log('调用 Gemini API，apiKey 前6位:', apiKey.slice(0, 6));
+
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`,
       {
@@ -66,23 +71,30 @@ ${brief}
     );
 
     const data = await response.json();
+    console.log('Gemini 响应状态:', response.status);
+    console.log('Gemini 响应内容(前500字):', JSON.stringify(data).slice(0, 500));
 
     if (!response.ok) {
+      console.error('Gemini API 报错:', JSON.stringify(data));
       return { statusCode: response.status, body: JSON.stringify({ error: data?.error?.message || '调用 Gemini API 失败' }) };
     }
 
     const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.log('提取的原始文本(前300字):', raw.slice(0, 300));
+
     const cleaned = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
 
     let parsed;
     try {
       parsed = JSON.parse(cleaned);
     } catch (e) {
+      console.error('JSON 解析失败，原始内容:', cleaned);
       return { statusCode: 502, body: JSON.stringify({ error: 'AI 返回内容解析失败，请重试' }) };
     }
 
     return { statusCode: 200, body: JSON.stringify(parsed) };
   } catch (err) {
+    console.error('函数执行异常:', err.message, err.stack);
     return { statusCode: 500, body: JSON.stringify({ error: err.message || '服务器内部错误' }) };
   }
 };
