@@ -3,8 +3,8 @@
 // 浏览器前端永远不会接触到真实的 Key。
 // 加了自动重试 + 备用模型，遇到临时繁忙(503)会自动切换，提高面试/演示时的稳定性。
 
-const PRIMARY_MODEL = 'gemini-3.6-flash';
-const FALLBACK_MODEL = 'gemini-2.5-flash';
+const PRIMARY_MODEL = 'gemini-2.5-flash-lite';
+const FALLBACK_MODEL = 'gemini-3.5-flash-lite';
 
 async function callGemini(apiKey, model, systemPrompt, userPrompt) {
   const response = await fetch(
