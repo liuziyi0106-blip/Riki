@@ -3,8 +3,8 @@
 // 浏览器前端永远不会接触到真实的 Key。
 // 加了自动重试 + 备用模型，遇到临时繁忙(503)会自动切换，提高面试/演示时的稳定性。
 
-const PRIMARY_MODEL = 'gemini-2.5-flash-lite';
-const FALLBACK_MODEL = 'gemini-3.5-flash-lite';
+const PRIMARY_MODEL = 'gemini-3.5-flash-lite';
+const FALLBACK_MODEL = 'gemini-3.6-flash';
 
 async function callGemini(apiKey, model, systemPrompt, userPrompt) {
   const response = await fetch(
@@ -77,7 +77,6 @@ ${brief}
 
 请基于以上信息生成内容。`;
 
-  // 尝试顺序：主模型 -> 主模型重试一次(等2秒) -> 备用模型 -> 备用模型重试一次(等2秒)
   const attempts = [
     { model: PRIMARY_MODEL, delay: 0 },
     { model: PRIMARY_MODEL, delay: 2000 },
@@ -96,9 +95,6 @@ ${brief}
       if (!result.ok) {
         console.error(`模型 ${attempt.model} 报错:`, JSON.stringify(result.data).slice(0, 300));
         lastError = result.data?.error?.message || `模型 ${attempt.model} 调用失败`;
-        // 503/429 这类临时性错误才继续重试，其他错误(比如key无效)直接停止
-        const code = result.data?.error?.code;
-        if (code !== 503 && code !== 429) break;
         continue;
       }
 
