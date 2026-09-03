@@ -1,6 +1,38 @@
 // Netlify Function
 // 负责在服务器端调用 Google Gemini API（免费额度），API Key 只存在于服务器环境变量中，
 // 浏览器前端永远不会接触到真实的 Key。
+// 加了自动重试 + 备用模型，遇到临时繁忙(503)会自动切换，提高面试/演示时的稳定性。
+
+const PRIMARY_MODEL = 'gemini-3.6-flash';
+const FALLBACK_MODEL = 'gemini-2.5-flash';
+
+async function callGemini(apiKey, model, systemPrompt, userPrompt) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey
+      },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        generationConfig: {
+          temperature: 0.8,
+          maxOutputTokens: 3000,
+          responseMimeType: 'application/json'
+        }
+      })
+    }
+  );
+  const data = await response.json();
+  return { ok: response.ok, status: response.status, data };
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') {
@@ -17,13 +49,11 @@ exports.handler = async function (event) {
   try {
     payload = JSON.parse(event.body || '{}');
   } catch (e) {
-    console.error('请求体解析失败:', event.body);
     return { statusCode: 400, body: JSON.stringify({ error: '请求格式错误' }) };
   }
 
   const { brief, platform, market, marketLang, contentType } = payload;
   if (!brief || !platform || !market || !contentType) {
-    console.error('缺少参数:', payload);
     return { statusCode: 400, body: JSON.stringify({ error: '缺少必要参数（brief / platform / market / contentType）' }) };
   }
 
@@ -47,54 +77,50 @@ ${brief}
 
 请基于以上信息生成内容。`;
 
-  try {
-    console.log('调用 Gemini API，apiKey 前6位:', apiKey.slice(0, 6));
+  // 尝试顺序：主模型 -> 主模型重试一次(等2秒) -> 备用模型 -> 备用模型重试一次(等2秒)
+  const attempts = [
+    { model: PRIMARY_MODEL, delay: 0 },
+    { model: PRIMARY_MODEL, delay: 2000 },
+    { model: FALLBACK_MODEL, delay: 0 },
+    { model: FALLBACK_MODEL, delay: 2000 },
+  ];
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey
-        },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-          generationConfig: {
-            temperature: 0.8,
-            maxOutputTokens: 3000,
-            responseMimeType: 'application/json'
-          }
-        })
-      }
-    );
+  let lastError = null;
 
-    const data = await response.json();
-    console.log('Gemini 响应状态:', response.status);
-    console.log('Gemini 响应内容(前500字):', JSON.stringify(data).slice(0, 500));
-
-    if (!response.ok) {
-      console.error('Gemini API 报错:', JSON.stringify(data));
-      return { statusCode: response.status, body: JSON.stringify({ error: data?.error?.message || '调用 Gemini API 失败' }) };
-    }
-
-    const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    console.log('提取的原始文本(前300字):', raw.slice(0, 300));
-
-    const cleaned = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
-
-    let parsed;
+  for (const attempt of attempts) {
+    if (attempt.delay) await sleep(attempt.delay);
     try {
-      parsed = JSON.parse(cleaned);
-    } catch (e) {
-      console.error('JSON 解析失败，原始内容:', cleaned);
-      return { statusCode: 502, body: JSON.stringify({ error: 'AI 返回内容解析失败，请重试' }) };
-    }
+      console.log(`尝试调用模型: ${attempt.model}`);
+      const result = await callGemini(apiKey, attempt.model, systemPrompt, userPrompt);
 
-    return { statusCode: 200, body: JSON.stringify(parsed) };
-  } catch (err) {
-    console.error('函数执行异常:', err.message, err.stack);
-    return { statusCode: 500, body: JSON.stringify({ error: err.message || '服务器内部错误' }) };
+      if (!result.ok) {
+        console.error(`模型 ${attempt.model} 报错:`, JSON.stringify(result.data).slice(0, 300));
+        lastError = result.data?.error?.message || `模型 ${attempt.model} 调用失败`;
+        // 503/429 这类临时性错误才继续重试，其他错误(比如key无效)直接停止
+        const code = result.data?.error?.code;
+        if (code !== 503 && code !== 429) break;
+        continue;
+      }
+
+      const raw = result.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const cleaned = raw.trim().replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
+
+      let parsed;
+      try {
+        parsed = JSON.parse(cleaned);
+      } catch (e) {
+        console.error('JSON 解析失败，原始内容:', cleaned.slice(0, 300));
+        lastError = 'AI 返回内容解析失败';
+        continue;
+      }
+
+      console.log(`成功，使用模型: ${attempt.model}`);
+      return { statusCode: 200, body: JSON.stringify(parsed) };
+    } catch (err) {
+      console.error('调用异常:', err.message);
+      lastError = err.message;
+    }
   }
+
+  return { statusCode: 502, body: JSON.stringify({ error: lastError || '多次重试后仍然失败，请稍后再试' }) };
 };
